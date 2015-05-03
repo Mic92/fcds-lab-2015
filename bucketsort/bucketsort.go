@@ -2,10 +2,11 @@ package bucketsort
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"reflect"
+	"unsafe"
 )
 
 const (
@@ -14,15 +15,19 @@ const (
 )
 
 func sort(data []byte, bucket []int, length int) {
+	p := (*(*reflect.SliceHeader)(unsafe.Pointer(&data))).Data
 	for j, key := range bucket {
 		i := j - 1
+
 		bIdx := key * length
-		b := data[bIdx:(bIdx + length)]
+		b := *(*[7]byte)(unsafe.Pointer(p + uintptr(bIdx)))
+		bi := uint64(b[6]) | uint64(b[5])<<8 | uint64(b[4])<<16 | uint64(b[3])<<24 | uint64(b[2])<<32 | uint64(b[1])<<40 | uint64(b[0])<<48
 
 		for i >= 0 {
 			aIdx := bucket[i] * length
-			a := data[aIdx:(aIdx + length)]
-			if bytes.Compare(a, b) <= 0 {
+			a := *(*[7]byte)(unsafe.Pointer(p + uintptr(aIdx)))
+			ai := uint64(a[6]) | uint64(a[5])<<8 | uint64(a[4])<<16 | uint64(a[3])<<24 | uint64(a[2])<<32 | uint64(a[1])<<40 | uint64(a[0])<<48
+			if ai <= bi {
 				break
 			}
 			bucket[i+1] = bucket[i]
@@ -31,7 +36,6 @@ func sort(data []byte, bucket []int, length int) {
 		bucket[i+1] = key
 	}
 }
-
 func Sort(data []byte, wordLength int) []int {
 	var buckets [NUMBER_OF_BUCKETS][]int
 	size := len(data) / wordLength

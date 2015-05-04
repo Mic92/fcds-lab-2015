@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
-	"unsafe"
+	"sort"
 )
 
 const (
@@ -14,33 +13,17 @@ const (
 	WORD_LENGTH       = 7
 )
 
-func sort(data []byte, bucket []int, length int) {
-	p := (*(*reflect.SliceHeader)(unsafe.Pointer(&data))).Data
-	for j, key := range bucket {
-		i := j - 1
+type Uint64Slice []uint64
 
-		bIdx := key * length
-		b := *(*[7]byte)(unsafe.Pointer(p + uintptr(bIdx)))
-		bi := uint64(b[6]) | uint64(b[5])<<8 | uint64(b[4])<<16 | uint64(b[3])<<24 | uint64(b[2])<<32 | uint64(b[1])<<40 | uint64(b[0])<<48
+func (p Uint64Slice) Len() int           { return len(p) }
+func (p Uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
+func (p Uint64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-		for i >= 0 {
-			aIdx := bucket[i] * length
-			a := *(*[7]byte)(unsafe.Pointer(p + uintptr(aIdx)))
-			ai := uint64(a[6]) | uint64(a[5])<<8 | uint64(a[4])<<16 | uint64(a[3])<<24 | uint64(a[2])<<32 | uint64(a[1])<<40 | uint64(a[0])<<48
-			if ai <= bi {
-				break
-			}
-			bucket[i+1] = bucket[i]
-			i--
-		}
-		bucket[i+1] = key
-	}
-}
-func Sort(data []byte, wordLength int) []int {
-	var buckets [NUMBER_OF_BUCKETS][]int
+func Sort(data []byte, wordLength int) []uint64 {
+	var buckets [NUMBER_OF_BUCKETS]Uint64Slice
 	size := len(data) / wordLength
 
-	returns := make([]int, size)
+	returns := make(Uint64Slice, size)
 	step := size / NUMBER_OF_BUCKETS
 	for i := range buckets {
 		offset := i * step
@@ -48,12 +31,20 @@ func Sort(data []byte, wordLength int) []int {
 	}
 
 	for i := 0; i < size; i++ {
-		key := data[i*wordLength] - 0x21
-		buckets[key] = append(buckets[key], i)
+		a := data[i*wordLength : i*wordLength+wordLength]
+		key := a[0] - 0x21
+		val := uint64(a[6]) |
+			uint64(a[5])<<8 |
+			uint64(a[4])<<16 |
+			uint64(a[3])<<24 |
+			uint64(a[2])<<32 |
+			uint64(a[1])<<40 |
+			uint64(a[0])<<48
+		buckets[key] = append(buckets[key], val)
 	}
 
 	for _, bucket := range buckets {
-		sort(data, bucket, wordLength)
+		sort.Sort(bucket)
 	}
 
 	return returns
@@ -89,17 +80,23 @@ func readInput(in *os.File, wordLength int) ([]byte, error) {
 
 func SortFile(in *os.File, out *os.File) error {
 	data, err := readInput(in, WORD_LENGTH)
+	buffedOut := bufio.NewWriter(out)
+	defer buffedOut.Flush()
 
 	if err != nil {
 		return err
 	}
-	for _, idx := range Sort(data, WORD_LENGTH) {
-		offset := idx * WORD_LENGTH
-		_, err = out.Write(data[offset : offset+WORD_LENGTH])
-		if err != nil {
-			return err
+	for _, v := range Sort(data, WORD_LENGTH) {
+		outData := []byte{byte(v >> 48),
+			byte(v >> 40),
+			byte(v >> 32),
+			byte(v >> 24),
+			byte(v >> 16),
+			byte(v >> 8),
+			byte(v),
+			'\n',
 		}
-		_, err = out.Write([]byte{'\n'})
+		_, err = buffedOut.Write(outData)
 		if err != nil {
 			return err
 		}

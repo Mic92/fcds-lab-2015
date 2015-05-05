@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"sync"
 )
 
 const (
@@ -19,11 +20,11 @@ func (p Uint64Slice) Len() int           { return len(p) }
 func (p Uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
 func (p Uint64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-func Sort(data []byte, wordLength int) []uint64 {
-	var buckets [NUMBER_OF_BUCKETS]Uint64Slice
-	size := len(data) / wordLength
+func Sort(data []byte) []uint64 {
+	var buckets [NUMBER_OF_BUCKETS][]uint64
+	size := len(data) / WORD_LENGTH
 
-	returns := make(Uint64Slice, size)
+	returns := make([]uint64, size)
 	step := size / NUMBER_OF_BUCKETS
 	for i := range buckets {
 		offset := i * step
@@ -31,7 +32,7 @@ func Sort(data []byte, wordLength int) []uint64 {
 	}
 
 	for i := 0; i < size; i++ {
-		a := data[i*wordLength : i*wordLength+wordLength]
+		a := data[i*WORD_LENGTH : i*WORD_LENGTH+WORD_LENGTH]
 		key := a[0] - 0x21
 		val := uint64(a[6]) |
 			uint64(a[5])<<8 |
@@ -43,14 +44,20 @@ func Sort(data []byte, wordLength int) []uint64 {
 		buckets[key] = append(buckets[key], val)
 	}
 
-	for _, bucket := range buckets {
-		sort.Sort(bucket)
+	var wg sync.WaitGroup
+	for i, bucket := range buckets {
+		wg.Add(1)
+		go func(i int, b []uint64) {
+			sort.Sort(Uint64Slice(b))
+			wg.Done()
+		}(i, bucket)
 	}
+	wg.Wait()
 
 	return returns
 }
 
-func readInput(in *os.File, wordLength int) ([]byte, error) {
+func readInput(in *os.File) ([]byte, error) {
 	r := bufio.NewReader(in)
 	var lineCount int
 	n, err := fmt.Fscanln(r, &lineCount)
@@ -61,7 +68,7 @@ func readInput(in *os.File, wordLength int) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	data := make([]byte, 0, lineCount*wordLength)
+	data := make([]byte, 0, lineCount*WORD_LENGTH)
 	for {
 		line, isPrefix, err := r.ReadLine()
 		if isPrefix {
@@ -79,15 +86,16 @@ func readInput(in *os.File, wordLength int) ([]byte, error) {
 }
 
 func SortFile(in *os.File, out *os.File) error {
-	data, err := readInput(in, WORD_LENGTH)
-	buffedOut := bufio.NewWriter(out)
-	defer buffedOut.Flush()
-
+	data, err := readInput(in)
 	if err != nil {
 		return err
 	}
-	for _, v := range Sort(data, WORD_LENGTH) {
-		outData := []byte{byte(v >> 48),
+
+	buffedOut := bufio.NewWriter(out)
+	defer buffedOut.Flush()
+	for _, v := range Sort(data) {
+		outData := []byte{
+			byte(v >> 48),
 			byte(v >> 40),
 			byte(v >> 32),
 			byte(v >> 24),

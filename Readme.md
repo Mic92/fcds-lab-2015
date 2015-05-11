@@ -2,8 +2,8 @@ My implementation Foundations of Concurrent and Distributed Systems Lab in go
 
 Implemented algorithm:
 
-- [ ] bucketsort
+- [x] bucketsort
 - [ ] friendly
 - [ ] haar
 - [ ] knapsack
-- [ ] threesat
+- [x] threesat

@@ -8,9 +8,8 @@ import (
 )
 
 type Clause struct {
-	first  int16
-	second int16
-	third  int16
+	Value uint64 // the value of the bits
+	Mask  uint64 // which bits are set
 }
 
 type Solver struct {
@@ -18,34 +17,21 @@ type Solver struct {
 	NVar    uint
 }
 
-func (s *Solver) Solve() *int64 {
+func (s *Solver) Solve() *uint64 {
 	if s.NVar == 0 {
 		return nil
 	}
-	iVar := make([]int64, s.NVar)
-	for i := uint(0); i < s.NVar; i++ {
-		iVar[i] = 1 << i
-	}
-	maxNumber := iVar[len(iVar)-1] << 1
+	maxNumber := uint64(1 << uint(s.NVar))
 
 	nClauses := len(s.Clauses)
-	for number := int64(0); number < maxNumber; number++ {
+	for number := uint64(0); number < maxNumber; number++ {
 		var round int
 		for c, clause := range s.Clauses {
-			v1 := clause.first
-			v2 := clause.second
-			v3 := clause.third
-
-			if (v1 > 0 && (number&iVar[v1-1]) > 0) ||
-				(v1 < 0 && (number&iVar[-v1-1]) == 0) ||
-				(v2 > 0 && (number&iVar[v2-1]) > 0) ||
-				(v2 < 0 && (number&iVar[-v2-1]) == 0) ||
-				(v3 > 0 && (number&iVar[v3-1]) > 0) ||
-				(v3 < 0 && (number&iVar[-v3-1]) == 0) {
+			// (number XNOR Value) & Mask
+			if ((^(number ^ clause.Value)) & clause.Mask) > 0 {
 				round = c
 				continue // clause is true
 			}
-
 			break // clause is false
 		}
 		if round == (nClauses - 1) {
@@ -53,6 +39,35 @@ func (s *Solver) Solve() *int64 {
 		}
 	}
 	return nil
+}
+
+func NewClause(v1, v2, v3 int16) *Clause {
+	var value uint64
+	uv1 := uint16(-v1)
+	uv2 := uint16(-v2)
+	uv3 := uint16(-v3)
+
+	if v1 > 0 {
+		value |= 1 << uint16(v1-1)
+		uv1 = uint16(v1)
+	}
+	if v2 > 0 {
+		value |= 1 << uint16(v2-1)
+		uv2 = uint16(v2)
+	}
+	if v3 > 0 {
+		value |= 1 << uint16(v3-1)
+		uv3 = uint16(v3)
+	}
+
+	if v1 == -v2 || v2 == -v3 || v1 == -v3 {
+		return nil // discard -> always true
+	}
+
+	return &Clause{
+		value,
+		1<<(uv1-1) | 1<<(uv2-1) | 1<<(uv3-1),
+	}
 }
 
 func New(in *os.File) (*Solver, error) {
@@ -64,10 +79,10 @@ func New(in *os.File) (*Solver, error) {
 		return nil, fmt.Errorf("failed to parse header: %v", err)
 	}
 	solver := Solver{
-		make([]Clause, nClauses),
+		make([]Clause, 0, nClauses),
 		nVar,
 	}
-	for i := range solver.Clauses {
+	for i := uint(0); i < nClauses; i++ {
 		var v1, v2, v3 int16
 		_, err := fmt.Fscanln(r, &v1, &v2, &v3)
 		if err == io.EOF {
@@ -76,7 +91,10 @@ func New(in *os.File) (*Solver, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error while reading file %v: %v", in, err)
 		}
-		solver.Clauses[i] = Clause{v1, v2, v3}
+		c := NewClause(v1, v2, v3)
+		if c != nil {
+			solver.Clauses = append(solver.Clauses, *c)
+		}
 	}
 	return &solver, nil
 }

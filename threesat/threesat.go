@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 )
 
 type Clause struct {
@@ -21,10 +22,25 @@ func (s *Solver) Solve() *uint64 {
 	if s.NVar == 0 {
 		return nil
 	}
+	max := uint64(runtime.GOMAXPROCS(-1))
+	result := make(chan *uint64, 1)
 	maxNumber := uint64(1 << uint(s.NVar))
+	for i := uint64(0); i < max; i++ {
+		go s.solve(i, max, maxNumber, result)
+	}
 
+	for i := uint64(0); i < max; i++ {
+		number := <-result
+		if number != nil {
+			return number
+		}
+	}
+	return nil
+}
+
+func (s *Solver) solve(start uint64, step uint64, maxNumber uint64, result chan *uint64) {
 	nClauses := len(s.Clauses)
-	for number := uint64(0); number < maxNumber; number++ {
+	for number := start; number < maxNumber; number += step {
 		var round int
 		for c, clause := range s.Clauses {
 			// (number XNOR Value) & Mask
@@ -35,10 +51,12 @@ func (s *Solver) Solve() *uint64 {
 			break // clause is false
 		}
 		if round == (nClauses - 1) {
-			return &number
+			result <- &number
+			return
 		}
 	}
-	return nil
+
+	result <- nil
 }
 
 func NewClause(v1, v2, v3 int16) *Clause {

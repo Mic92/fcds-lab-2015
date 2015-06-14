@@ -8,6 +8,7 @@ import (
 	"github.com/Mic92/fcds-lab-2015/threesat"
 	"log"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"time"
 )
@@ -95,6 +96,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	in, out, err := openInputOutput(args[1:])
 	if err != nil {
 		log.Fatal(err)

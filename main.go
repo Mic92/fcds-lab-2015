@@ -14,6 +14,8 @@ import (
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
+const usage = "USAGE: %s bucketsort|threesat|haar\n"
+
 func doBucketsort(in, out *os.File) {
 	if err := bucketsort.SortFile(in, out); err != nil {
 		log.Fatal(err)
@@ -47,8 +49,36 @@ func doHaar(in, out *os.File) {
 	}
 }
 
+func openInputOutput(args []string) (in, out *os.File, err error) {
+	switch len(args) {
+	case 0:
+		in = os.Stdin
+		out = os.Stdout
+	case 1:
+		in = os.Stdin
+		out, err = os.Create(os.Args[0])
+		if err != nil {
+			return nil, nil, fmt.Errorf("error opening output file '%s': %v", args[0], err)
+		}
+	default:
+		in, err = os.Open(os.Args[0])
+		if err != nil {
+			return nil, nil, fmt.Errorf("error opening input file '%s': %v", args[0], err)
+		}
+		out, err = os.Create(os.Args[1])
+		if err != nil {
+			return nil, nil, fmt.Errorf("error opening output file '%s': %v", args[1], err)
+		}
+	}
+	return in, out, nil
+}
+
 func main() {
 	log.SetOutput(os.Stderr)
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, os.Args[0])
+		flag.PrintDefaults()
+	}
 
 	flag.Parse()
 	if *cpuprofile != "" {
@@ -61,31 +91,13 @@ func main() {
 	}
 	args := flag.Args()
 	if len(args) < 1 {
-		log.Fatalf("USAGE: %s bucketsort|threesat|haar", os.Args[0])
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	var in, out *os.File
-	var err error
-
-	switch len(args) {
-	case 1:
-		in = os.Stdin
-		out = os.Stdout
-	case 2:
-		in = os.Stdin
-		out, err = os.Create(os.Args[2])
-		if err != nil {
-			log.Fatalf("error opening output file '%s': %v", args[1], err)
-		}
-	default:
-		in, err = os.Open(os.Args[2])
-		if err != nil {
-			log.Fatalf("error opening input file '%s': %v", err)
-		}
-		out, err = os.Create(os.Args[3])
-		if err != nil {
-			log.Fatalf("error opening output file '%s': %v", args[1], err)
-		}
+	in, out, err := openInputOutput(args[1:])
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	start := time.Now()

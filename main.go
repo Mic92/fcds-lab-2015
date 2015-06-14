@@ -114,5 +114,5 @@ func main() {
 		log.Fatalf("algorithm not implemented: %s", os.Args[1])
 	}
 	elapsed := time.Since(start)
-	log.Printf("took %s", elapsed)
+	log.Printf("took %ss", elapsed.Seconds())
 }

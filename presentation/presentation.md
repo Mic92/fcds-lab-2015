@@ -76,19 +76,74 @@ Pthreads, you could show a toy example of creating and joining threads.
 
 ## The language: Channels
 
+<iframe src="http://play.golang.org/p/bEnCkiA99F" frameborder="0" style="width: 1000px; height: 500px">
+  <a href="http://play.golang.org/p/bEnCkiA99F">see this code in play.golang.org</a>
+</iframe>
+
+<!--
+```
+package main
+import "fmt"
+
+func main() {
+    messages := make(chan string)
+    go func() { messages <- "ping" }()
+    msg := <-messages
+    fmt.Println(msg)
+}
+```
+-->
+
 
 
 ## Current Status
 
+- ready:
+  - bucketsort
+  - 3sat
+- work in progress:
+  - haar
+
+Note:
+- bucketsort was my first algorithm
+- then 3sat
+- currently on haar
+
+
+
+## Measurement
+
+- for each core 1..8:
+  - repeat 10 times
+- exclude slowest and fastest execution
+- median of execution time
+
+
+
+## Graphs
+
+<img src="bucketsort1.png" alt="bucketsort" height="500">
+
+
 Note:
 - Your current status: which programs you already implemented.
 
 
 
-## Graph
+## Graphs
+
+<img src="bucketsort2.png" alt="bucketsort" height="500">
+
 
 Note:
 - Your current status: which programs you already implemented.
+
+
+
+
+## Graphs
+
+<img src="threesat.png" alt="threesat" height="500">
 
 
 

@@ -44,11 +44,10 @@ func (s *Solver) solve(start uint64, step uint64, maxNumber uint64, result chan 
 		var round int
 		for c, clause := range s.Clauses {
 			// (number XNOR Value) & Mask
-			if ((^(number ^ clause.Value)) & clause.Mask) > 0 {
-				round = c
-				continue // clause is true
+			if ((^(number ^ clause.Value)) & clause.Mask) <= 0 {
+				break // clause is false
 			}
-			break // clause is false
+			round = c
 		}
 		if round == (nClauses - 1) {
 			result <- &number

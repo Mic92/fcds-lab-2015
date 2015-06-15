@@ -35,6 +35,7 @@ Note:
 - What you get out of the compiler is a statically linked binary that run on the
   target plattform without any additional libraries
 - concurrency as part of the language with goroutines/channels)
+- object-oriented: without classes
 
 
 
@@ -135,6 +136,8 @@ Note:
 - repeat each benchmark for increasing cpu core count 10 times and take the
   execution time
 - then I excluded the slowest and fastest execution
+- go version
+- machine details
 
 
 
@@ -191,3 +194,22 @@ Note:
 - where possible I use more efficient datastructure, for 3sat the Clause is
   encoded as a single value, so just 1 bitoperation is needed to evaluate the
   solution
+
+
+
+## Optimizations
+
+```
+	var wg sync.WaitGroup
+	for i, bucket := range buckets {
+		wg.Add(1)
+		go func(i int, b []uint64) {
+			sort.Sort(Uint64Slice(b))
+			wg.Done()
+		}(i, bucket)
+	}
+	wg.Wait()
+```
+
+Note:
+- use waitgroup to synchronize between other group

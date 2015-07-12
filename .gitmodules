@@ -2,3 +2,6 @@
 	path = pages
 	url = git@github.com:Mic92/fcds-lab-2015.git
 	branch = origin/gh-pages
+[submodule "lab"]
+	path = lab
+	url = https://bitbucket.org/dimakuv/fcds-lab-2015.git

@@ -98,32 +98,54 @@ func (i Image) Transform() {
 		upper := mid*uintptr(i.Dimension) + pixels
 
 		// row-transformation
-		for row := pixels; row < upper; row += dimension {
-			upperInner := mid + row
-			for p := row; p < upperInner; p += SIZEOF_INT32 {
-				pixel1 := (*int32)(unsafe.Pointer(p))
-				pixel2 := (*int32)(unsafe.Pointer(p + mid))
 
-				a := float64(*pixel1+*pixel2) / sqrt_2
-				d := float64(*pixel1-*pixel2) / sqrt_2
-				*pixel1 = int32(a)
-				*pixel2 = int32(d)
-			}
+		var waitGroup sync.WaitGroup
+		waitGroup.Add(int(s / 2))
+		for row := pixels; row < upper; row += dimension {
+			go func(row uintptr) {
+				upperInner := mid + row
+				for p := row; p < upperInner; p += SIZEOF_INT32 {
+					pixel1 := (*int32)(unsafe.Pointer(p))
+					pixel2 := (*int32)(unsafe.Pointer(p + mid))
+
+					a := float64(*pixel1+*pixel2) / sqrt_2
+					d := float64(*pixel1-*pixel2) / sqrt_2
+					*pixel1 = int32(a)
+					*pixel2 = int32(d)
+				}
+				waitGroup.Done()
+			}(row)
+		}
+		waitGroup.Wait()
+		if debug {
+			fmt.Printf("after row-transformation: %d\n", s/2)
+			i.print()
 		}
 
 		// column-transformation
+
+		var waitGroup2 sync.WaitGroup
+		waitGroup2.Add(int(s / 2))
 		midOffset2 := mid * uintptr(i.Dimension)
 		for row := pixels; row < upper; row += dimension {
-			upperInner := mid + row
-			for p := row; p < upperInner; p += SIZEOF_INT32 {
-				pixel1 := (*int32)(unsafe.Pointer(p))
-				pixel2 := (*int32)(unsafe.Pointer(p + midOffset2))
+			go func(row uintptr) {
+				upperInner := mid + row
+				for p := row; p < upperInner; p += SIZEOF_INT32 {
+					pixel1 := (*int32)(unsafe.Pointer(p))
+					pixel2 := (*int32)(unsafe.Pointer(p + midOffset2))
 
-				a := float64(*pixel1+*pixel2) / sqrt_2
-				d := float64(*pixel1-*pixel2) / sqrt_2
-				*pixel1 = int32(a)
-				*pixel2 = int32(d)
-			}
+					a := float64(*pixel1+*pixel2) / sqrt_2
+					d := float64(*pixel1-*pixel2) / sqrt_2
+					*pixel1 = int32(a)
+					*pixel2 = int32(d)
+				}
+				waitGroup2.Done()
+			}(row)
+		}
+		waitGroup2.Wait()
+		if debug {
+			fmt.Printf("after column-transformation: %d\n", s/2)
+			i.print()
 		}
 	}
 }

@@ -7,13 +7,14 @@ import (
 	"math"
 	"os"
 	"reflect"
-	"syscall"
+	"sync"
 	"time"
 	"unsafe"
 )
 
 const SIZEOF_INT32 = 4
 const SIZEOF_INT64 = 8
+const debug = false
 
 func ProcessFile(in, out *os.File) error {
 	info, err := in.Stat()
@@ -25,13 +26,15 @@ func ProcessFile(in, out *os.File) error {
 		return fmt.Errorf("input file to small to contain size metadata")
 	}
 
-	inBuf, err := syscall.Mmap(int(in.Fd()), 0, int(info.Size()), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_PRIVATE)
+	temp := make([]byte, SIZEOF_INT64)
+	_, err = in.Read(temp)
 	if err != nil {
-		return fmt.Errorf("Failed to mmap input file: %v", err)
+		return err
 	}
-	defer syscall.Munmap(inBuf)
+	dimension := getDimension(temp)
+	inBuf := make([]byte, dimension*dimension*SIZEOF_INT32)
+	in.ReadAt(inBuf, 0)
 
-	dimension := getDimension(inBuf)
 	data := castSlice(inBuf[SIZEOF_INT64:])
 	image := Image{data, dimension}
 	start := time.Now()
@@ -39,8 +42,8 @@ func ProcessFile(in, out *os.File) error {
 	elapsed := time.Since(start)
 	log.Printf("real time took %dms", elapsed.Nanoseconds()/1e6)
 
-	if _, err := syscall.Write(int(out.Fd()), inBuf); err != nil {
-		return fmt.Errorf("Failed to copy input file '%s' to  '%s': %v", in.Name(), out.Name(), err)
+	if _, err := out.Write(inBuf); err != nil {
+		return fmt.Errorf("Failed to write to '%s': %v", out.Name(), err)
 	}
 
 	return nil

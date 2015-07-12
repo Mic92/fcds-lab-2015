@@ -43,9 +43,9 @@ end
 
 Dir.chdir(File.realpath(File.join(File.dirname(__FILE__), "..")))
 
-unless File.exists?("lab/c_sequential/haar/large.in")
+unless File.exists?("lab/c_sequential/haar/input/large.in")
   $stderr.puts "Please run input_generator for haar first like this:\n" +
-    "  $ cd lab/c_sequential/haar/ && make && bin/input_generator large.in"
+    "  $ cd lab/c_sequential/haar/ && make && bin/input_generator input/large.in"
   exit(1)
 end
 

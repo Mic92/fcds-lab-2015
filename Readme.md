@@ -32,7 +32,6 @@ $ ./fcds-lab-2015 threesat < bucketsort/input/large.in
 ### haar
 
 ```
-$ gcc ./haar/input_generator.c -o ./haar/input_generator.o
-$ ./haar/input_generator haar/input/large.in
-$ ./fcds-lab-2015 haar < haar/input/large.in
+$ cd lab/c_sequential/haar/ && make && bin/input_generator input/large.in && cd -
+$ ./fcds-lab-2015 haar < lab/c_sequential/haar/input/large.in
 ```

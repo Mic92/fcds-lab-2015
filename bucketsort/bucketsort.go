@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"sync"
 	"time"
 )
@@ -14,12 +13,6 @@ const (
 	NUMBER_OF_BUCKETS = 94
 	WORD_LENGTH       = 7
 )
-
-type Uint64Slice []uint64
-
-func (p Uint64Slice) Len() int           { return len(p) }
-func (p Uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
-func (p Uint64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func Sort(data []byte) []uint64 {
 	var buckets [NUMBER_OF_BUCKETS][]uint64
@@ -49,7 +42,7 @@ func Sort(data []byte) []uint64 {
 	for i, bucket := range buckets {
 		wg.Add(1)
 		go func(i int, b []uint64) {
-			sort.Sort(Uint64Slice(b))
+			qsort(b)
 			wg.Done()
 		}(i, bucket)
 	}
@@ -116,4 +109,64 @@ func SortFile(in *os.File, out *os.File) (time.Duration, error) {
 		}
 	}
 	return elapsed, nil
+}
+
+func qsort(a []uint64) {
+	var qsort_rec func(int, int)
+	qsort_rec = func(lower, upper int) {
+		for {
+			switch upper - lower {
+			case -1, 0:
+				return
+			case 1:
+				if a[upper] < a[lower] {
+					a[upper], a[lower] = a[lower], a[upper]
+				}
+				return
+			}
+
+			bx := (upper + lower) / 2
+			b := a[bx]
+			lp := lower
+			up := upper
+		outer:
+			for {
+				for lp < upper && !(b < a[lp]) {
+					lp++
+				}
+				for {
+					if lp > up {
+						break outer
+					}
+					if a[up] < b {
+						break
+					}
+					up--
+				}
+				a[lp], a[up] = a[up], a[lp]
+				lp++
+				up--
+			}
+			if bx < lp {
+				if bx < lp-1 {
+					a[bx], a[lp-1] = a[lp-1], b
+				}
+				up = lp - 2
+			} else {
+				if bx > lp {
+					a[bx], a[lp] = a[lp], b
+				}
+				up = lp - 1
+				lp++
+			}
+			if up-lower < upper-lp {
+				qsort_rec(lower, up)
+				lower = lp
+			} else {
+				qsort_rec(lp, upper)
+				upper = up
+			}
+		}
+	}
+	qsort_rec(0, len(a)-1)
 }

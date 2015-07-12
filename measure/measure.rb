@@ -49,6 +49,7 @@ unless File.exists?("lab/c_sequential/haar/input/large.in")
   exit(1)
 end
 
-bench "./fcds-lab-2015 bucketsort < lab/c_sequential/bucketsort/input/medium.in > out"
+bench "./fcds-lab-2015 bucketsort < lab/c_sequential/bucketsort/input/large1.in > bucketsort.out"
+bench "./fcds-lab-2015 bucketsort < lab/c_sequential/bucketsort/input/large2.in > bucketsort2.out"
 bench "./fcds-lab-2015 threesat < lab/c_sequential/3sat/input/large.in"
 bench "./fcds-lab-2015 haar < lab/c_sequential/haar/input/large.in > haar.out"

@@ -106,14 +106,16 @@ func (i Image) Transform() {
 	for s := i.Dimension; s > 1; s /= 2 {
 		mid := s / 2
 		// row-transformation
-		for y := uint64(0); y < mid; y++ {
-			for x := uint64(0); x < mid; x++ {
-				pixel1 := int64(i.Pixels[y*i.Dimension+x])
-				pixel2 := int64(i.Pixels[y*i.Dimension+x+mid])
+		upper := mid * i.Dimension
+		for row := uint64(0); row < upper; row += i.Dimension {
+			upperInner := mid + row
+			for pos := uint64(row); pos < upperInner; pos++ {
+				pixel1 := int64(i.Pixels[pos])
+				pixel2 := int64(i.Pixels[pos+mid])
 				a := float64(pixel1+pixel2) / sqrt_2
 				d := float64(pixel1-pixel2) / sqrt_2
-				i.Pixels[y*i.Dimension+x] = int32(a)
-				i.Pixels[y*i.Dimension+x+mid] = int32(d)
+				i.Pixels[pos] = int32(a)
+				i.Pixels[pos+mid] = int32(d)
 			}
 		}
 		if debug {
@@ -121,14 +123,17 @@ func (i Image) Transform() {
 			i.print()
 		}
 		// column-transformation
-		for y := uint64(0); y < mid; y++ {
-			for x := uint64(0); x < mid; x++ {
-				pixel1 := int64(i.Pixels[y*i.Dimension+x])
-				pixel2 := int64(i.Pixels[(y+mid)*i.Dimension+x])
+		midOffset := mid * i.Dimension
+		upper2 := mid * i.Dimension
+		for row := uint64(0); row < upper2; row += i.Dimension {
+			upperInner := mid + row
+			for pos := uint64(row); pos < upperInner; pos++ {
+				pixel1 := int64(i.Pixels[pos])
+				pixel2 := int64(i.Pixels[pos+midOffset])
 				a := float64(pixel1+pixel2) / sqrt_2
 				d := float64(pixel1-pixel2) / sqrt_2
-				i.Pixels[y*i.Dimension+x] = int32(a)
-				i.Pixels[(y+mid)*i.Dimension+x] = int32(d)
+				i.Pixels[pos] = int32(a)
+				i.Pixels[pos+midOffset] = int32(d)
 			}
 		}
 		if debug {

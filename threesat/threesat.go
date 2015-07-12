@@ -83,9 +83,15 @@ func (s *Solver) solve_general(start uint64, step uint64, maxNumber uint64, resu
 	clause2 := s.Clauses[1]
 	clause3 := s.Clauses[2]
 	for number := start; number < maxNumber; number += step {
-		if ((^(number ^ clause1.Value))&clause1.Mask) <= 0 ||
-			((^(number ^ clause2.Value))&clause2.Mask) <= 0 ||
-			((^(number ^ clause3.Value))&clause3.Mask) <= 0 {
+		if ((^(number ^ clause1.Value)) & clause1.Mask) <= 0 {
+			continue
+		}
+
+		if ((^(number ^ clause2.Value)) & clause2.Mask) <= 0 {
+			continue
+		}
+
+		if ((^(number ^ clause3.Value)) & clause3.Mask) <= 0 {
 			continue
 		}
 

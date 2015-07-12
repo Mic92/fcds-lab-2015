@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"runtime"
+	"unsafe"
 )
 
 type Clause struct {
@@ -38,23 +40,69 @@ func (s *Solver) Solve() *uint64 {
 	return nil
 }
 
+var clause Clause
+var SIZEOF_CLAUSE = unsafe.Sizeof(clause)
+
 func (s *Solver) solve(start uint64, step uint64, maxNumber uint64, result chan *uint64) {
-	nClauses := len(s.Clauses)
+	if len(s.Clauses) <= 3 {
+		s.solve_3clauses(start, step, maxNumber, result)
+	} else {
+		s.solve_general(start, step, maxNumber, result)
+	}
+}
+
+func (s *Solver) solve_3clauses(start uint64, step uint64, maxNumber uint64, result chan *uint64) {
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&s.Clauses))
+	clauses := header.Data
+	nClauses := clauses + uintptr(len(s.Clauses))*SIZEOF_CLAUSE
+
 	for number := start; number < maxNumber; number += step {
-		var round int
-		for c, clause := range s.Clauses {
+		var hightestClause uintptr
+		for c := clauses; c < nClauses; c += SIZEOF_CLAUSE {
+			clause := (*Clause)(unsafe.Pointer(c))
 			// (number XNOR Value) & Mask
 			if ((^(number ^ clause.Value)) & clause.Mask) <= 0 {
 				break // clause is false
 			}
-			round = c
+			hightestClause = c
 		}
-		if round == (nClauses - 1) {
+		if hightestClause == (nClauses - SIZEOF_CLAUSE) {
 			result <- &number
 			return
 		}
 	}
+	result <- nil
+}
 
+func (s *Solver) solve_general(start uint64, step uint64, maxNumber uint64, result chan *uint64) {
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&s.Clauses))
+	clauses := header.Data + 3*SIZEOF_CLAUSE
+	nClauses := clauses + uintptr(len(s.Clauses))*SIZEOF_CLAUSE
+
+	clause1 := s.Clauses[0]
+	clause2 := s.Clauses[1]
+	clause3 := s.Clauses[2]
+	for number := start; number < maxNumber; number += step {
+		if ((^(number ^ clause1.Value))&clause1.Mask) <= 0 ||
+			((^(number ^ clause2.Value))&clause2.Mask) <= 0 ||
+			((^(number ^ clause3.Value))&clause3.Mask) <= 0 {
+			continue
+		}
+
+		var hightestClause uintptr
+		for c := clauses; c < nClauses; c += SIZEOF_CLAUSE {
+			clause := (*Clause)(unsafe.Pointer(c))
+			// (number XNOR Value) & Mask
+			if ((^(number ^ clause.Value)) & clause.Mask) <= 0 {
+				break // clause is false
+			}
+			hightestClause = c
+		}
+		if hightestClause == (nClauses - SIZEOF_CLAUSE) {
+			result <- &number
+			return
+		}
+	}
 	result <- nil
 }
 

@@ -80,7 +80,7 @@ func (s *Solver) solve_3clauses(start uint64, step uint64, maxNumber uint64, res
 func (s *Solver) solve_general(start uint64, step uint64, maxNumber uint64, result chan *uint64) {
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&s.Clauses))
 	clauses := header.Data + 3*SIZEOF_CLAUSE
-	nClauses := clauses + uintptr(len(s.Clauses))*SIZEOF_CLAUSE
+	nClauses := header.Data + uintptr(len(s.Clauses))*SIZEOF_CLAUSE
 
 	clause1 := s.Clauses[0]
 	clause2 := s.Clauses[1]

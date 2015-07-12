@@ -57,16 +57,16 @@ func openInputOutput(args []string) (in, out *os.File, err error) {
 		out = os.Stdout
 	case 1:
 		in = os.Stdin
-		out, err = os.Create(os.Args[0])
+		out, err = os.OpenFile(args[0], os.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC, 0660)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error opening output file '%s': %v", args[0], err)
 		}
 	default:
-		in, err = os.Open(os.Args[0])
+		in, err = os.Open(args[0])
 		if err != nil {
 			return nil, nil, fmt.Errorf("error opening input file '%s': %v", args[0], err)
 		}
-		out, err = os.Create(os.Args[1])
+		out, err = os.OpenFile(args[1], os.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC, 0660)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error opening output file '%s': %v", args[1], err)
 		}
@@ -101,6 +101,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer in.Close()
+	defer out.Close()
 
 	start := time.Now()
 	switch args[0] {

@@ -1,68 +1,101 @@
 package haar
 
 import (
+	"encoding/binary"
 	"fmt"
+	"log"
 	"math"
 	"os"
+	"reflect"
 	"syscall"
+	"time"
+	"unsafe"
 )
+
+const SIZEOF_INT32 = 4
+const SIZEOF_INT64 = 8
+
+const debug = false
 
 func ProcessFile(in, out *os.File) error {
 	info, err := in.Stat()
 	if err != nil {
 		return fmt.Errorf("Error stat input file '%s': %v", in.Name, err)
 	}
-	// check if out is a file
-	if _, err := out.Stat(); err != nil {
-		return fmt.Errorf("Error stat output file '%s': %v", out.Name, err)
+
+	if info.Size() < SIZEOF_INT64 {
+		return fmt.Errorf("input file to small to contain size metadata")
 	}
 
-	// void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off);
+	inBuf, err := syscall.Mmap(int(in.Fd()), 0, int(info.Size()), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_PRIVATE)
+	if err != nil {
+		return fmt.Errorf("Failed to mmap input file: %v", err)
+	}
+	defer syscall.Munmap(inBuf)
 
-	if err := out.Truncate(info.Size()); err != nil {
-		return fmt.Errorf("Failed to resize output file '%s' to %d bytes: %v", out.Name, info.Size(), err)
+	dimension := getDimension(inBuf)
+	data := castSlice(inBuf[SIZEOF_INT64:])
+	if debug {
+		log.Printf("dimension %d", dimension)
+	}
+	image := Image{data, dimension}
+	if debug {
+		log.Printf("data size %d", len(data))
 	}
 
-	// linux specific, but fast
-	if _, err := syscall.Splice(int(in.Fd()), nil, int(out.Fd()), nil, int(info.Size()), 0); err != nil {
-		return fmt.Errorf("Failed to copy input to output file: %v", err)
-	}
+	start := time.Now()
+	image.Transform()
+	elapsed := time.Since(start)
+	log.Printf("real time took %dms", elapsed.Nanoseconds()/1e6)
 
-	//buf, err := syscall.Mmap(int(out.Fd()), 0, int(info.Size()), syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
-	//if err != nil {
-	//	return fmt.Errorf("Failed to mmap output file: %v", err)
-	//}
+	if _, err := syscall.Write(int(out.Fd()), inBuf); err != nil {
+		return fmt.Errorf("Failed to copy input file '%s' to  '%s': %v", in.Name(), out.Name(), err)
+	}
 
 	return nil
+}
+
+func castSlice(data []byte) []int32 {
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&data))
+	// The length and capacity of the slice are different.
+	header.Len /= SIZEOF_INT32
+	header.Cap /= SIZEOF_INT32
+
+	// Convert slice header to an []int32
+	return *(*[]int32)(unsafe.Pointer(&header))
+}
+
+func getDimension(data []byte) uint64 {
+	if isLittleEndian() {
+		return binary.LittleEndian.Uint64(data)
+	} else {
+		return binary.BigEndian.Uint64(data)
+	}
+}
+
+func isLittleEndian() bool {
+	var i int32 = 0x01020304
+	u := unsafe.Pointer(&i)
+	pb := (*byte)(u)
+	b := *pb
+	return (b == 0x04)
 }
 
 var sqrt_2 = math.Sqrt(2)
 
 type Image struct {
-	Pixels    []int
-	Dimension int64
-}
-
-// will it be inlined?
-func (i Image) at(x, y int64) int64 {
-	return int64(i.Pixels[y*i.Dimension+x])
-}
-
-// will it be inlined?
-func (i Image) to(x, y int64, value int) {
-	i.Pixels[y*i.Dimension+x] = value
+	Pixels    []int32
+	Dimension uint64
 }
 
 func (i Image) print() {
-	for y := int64(0); y < i.Dimension; y++ {
-		for x := int64(0); x < i.Dimension; x++ {
+	for y := uint64(0); y < i.Dimension; y++ {
+		for x := uint64(0); x < i.Dimension; x++ {
 			fmt.Printf("%10d ", i.Pixels[y*i.Dimension+x])
 		}
 		fmt.Print("\n")
 	}
 }
-
-const debug = true
 
 func (i Image) Transform() {
 	if debug {
@@ -73,14 +106,14 @@ func (i Image) Transform() {
 	for s := i.Dimension; s > 1; s /= 2 {
 		mid := s / 2
 		// row-transformation
-		for y := int64(0); y < mid; y++ {
-			for x := int64(0); x < mid; x++ {
+		for y := uint64(0); y < mid; y++ {
+			for x := uint64(0); x < mid; x++ {
 				pixel1 := int64(i.Pixels[y*i.Dimension+x])
 				pixel2 := int64(i.Pixels[y*i.Dimension+x+mid])
 				a := float64(pixel1+pixel2) / sqrt_2
 				d := float64(pixel1-pixel2) / sqrt_2
-				i.Pixels[y*i.Dimension+x] = int(a)
-				i.Pixels[y*i.Dimension+x+mid] = int(d)
+				i.Pixels[y*i.Dimension+x] = int32(a)
+				i.Pixels[y*i.Dimension+x+mid] = int32(d)
 			}
 		}
 		if debug {
@@ -88,14 +121,14 @@ func (i Image) Transform() {
 			i.print()
 		}
 		// column-transformation
-		for y := int64(0); y < mid; y++ {
-			for x := int64(0); x < mid; x++ {
+		for y := uint64(0); y < mid; y++ {
+			for x := uint64(0); x < mid; x++ {
 				pixel1 := int64(i.Pixels[y*i.Dimension+x])
 				pixel2 := int64(i.Pixels[(y+mid)*i.Dimension+x])
 				a := float64(pixel1+pixel2) / sqrt_2
 				d := float64(pixel1-pixel2) / sqrt_2
-				i.Pixels[y*i.Dimension+x] = int(a)
-				i.Pixels[(y+mid)*i.Dimension+x] = int(d)
+				i.Pixels[y*i.Dimension+x] = int32(a)
+				i.Pixels[(y+mid)*i.Dimension+x] = int32(d)
 			}
 		}
 		if debug {

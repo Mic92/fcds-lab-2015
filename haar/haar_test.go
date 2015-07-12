@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var pixels_4x4_in = haar.Image{[]int{
+var pixels_4x4_in = haar.Image{[]int32{
 	55731,
 	27808,
 	30516,
@@ -25,7 +25,7 @@ var pixels_4x4_in = haar.Image{[]int{
 },
 	4,
 }
-var pixels_4x4_out = haar.Image{[]int{
+var pixels_4x4_out = haar.Image{[]int32{
 	126616,
 	13415,
 	17829,
@@ -46,18 +46,54 @@ var pixels_4x4_out = haar.Image{[]int{
 	4,
 }
 
-func TestTransform(t *testing.T) {
-	pixels_4x4_in.Transform()
+var pixels_8x8_in = haar.Image{[]int32{
+	34751, 42617, 27818, 7095, 55179, 50050, 31064, 14942,
+	15455, 21390, 2286, 11659, 42278, 12761, 34834, 63009,
+	12887, 38470, 12046, 3369, 1707, 65384, 36639, 8486,
+	31262, 434, 33470, 39032, 39173, 15767, 17714, 8388,
+	58384, 45532, 15483, 48027, 30046, 46547, 62969, 45501,
+	2401, 65255, 57160, 44679, 12481, 26458, 42153, 25368,
+	64928, 54199, 28737, 1100, 54047, 65376, 9586, 19773,
+	274, 43057, 58806, 39447, 58824, 10984, 47835, 51672,
+},
+	8,
+}
+
+var pixels_8x8_out = haar.Image{[]int32{
+	162616, -17415, 32427, 23724, -14444, -5255, -2295, -5548,
+	63892, 93326, -20091, -4036, -18966, 6101, -23014, -36309,
+	25694, -2063, 44662, 6704, 7905, -19031, -17389, -3618,
+	19730, 38815, 67173, 51603, -5593, -10842, 11141, 21668,
+	3681, 14137, 18492, -22942, 30046, 46547, 62969, 45501,
+	27168, -29067, -21858, 5740, 12481, 26458, 42153, 25368,
+	-38614, 13601, 4022, 5149, 54047, 65376, 9586, 19773,
+	35023, -22345, -15990, -4183, 58824, 10984, 47835, 51672,
+},
+	8,
+}
+
+func assertMatrix(a, b haar.Image, t *testing.T) {
 	sucess := true
 	for i := range pixels_4x4_in.Pixels {
 		if pixels_4x4_in.Pixels[i] == pixels_4x4_out.Pixels[i] {
 			t.Logf("[%d]=%d", i, pixels_4x4_in.Pixels[i])
 		} else {
 			sucess = false
-			t.Logf("[%d] %d != %d", i, pixels_4x4_in.Pixels[i], pixels_4x4_out.Pixels[i])
+			t.Logf("[%d]=%d != %d", i, pixels_4x4_in.Pixels[i], pixels_4x4_out.Pixels[i])
 		}
 	}
 	if !sucess {
 		t.Fail()
 	}
+
+}
+
+func TestTransform4x4(t *testing.T) {
+	pixels_4x4_in.Transform()
+	assertMatrix(pixels_4x4_in, pixels_4x4_out, t)
+}
+
+func TestTransform8x8(t *testing.T) {
+	pixels_8x8_in.Transform()
+	assertMatrix(pixels_8x8_in, pixels_8x8_out, t)
 }

@@ -11,7 +11,9 @@ Implemented algorithm:
 ## Usage:
 
 ```
+$ git clone https://github.com/Mic92/fcds-lab-2015.git
 $ cd fcds-lab-2015
+$ git submodule update --init
 $ go build .
 ```
 

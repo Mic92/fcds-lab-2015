@@ -3,7 +3,6 @@ package haar
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"reflect"
@@ -16,20 +15,11 @@ const SIZEOF_INT32 = 4
 const SIZEOF_INT64 = 8
 const debug = false
 
-func ProcessFile(in, out *os.File) error {
-	info, err := in.Stat()
-	if err != nil {
-		return fmt.Errorf("Error stat input file '%s': %v", in.Name, err)
-	}
-
-	if info.Size() < SIZEOF_INT64 {
-		return fmt.Errorf("input file to small to contain size metadata")
-	}
-
+func ProcessFile(in, out *os.File) (time.Duration, error) {
 	temp := make([]byte, SIZEOF_INT64)
-	_, err = in.Read(temp)
+	_, err := in.Read(temp)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	dimension := getDimension(temp)
 	inBuf := make([]byte, dimension*dimension*SIZEOF_INT32)
@@ -40,13 +30,12 @@ func ProcessFile(in, out *os.File) error {
 	start := time.Now()
 	image.Transform()
 	elapsed := time.Since(start)
-	log.Printf("real time took %dms", elapsed.Nanoseconds()/1e6)
 
 	if _, err := out.Write(inBuf); err != nil {
-		return fmt.Errorf("Failed to write to '%s': %v", out.Name(), err)
+		return elapsed, fmt.Errorf("Failed to write to '%s': %v", out.Name(), err)
 	}
 
-	return nil
+	return elapsed, nil
 }
 
 func castSlice(data []byte) []int32 {
@@ -96,13 +85,13 @@ func (i Image) Transform() {
 	pixels := header.Data
 	dimension := uintptr(i.Dimension) * SIZEOF_INT32
 
+	var waitGroup sync.WaitGroup
 	for s := i.Dimension; s > 1; s /= 2 {
 		mid := uintptr(s/2) * SIZEOF_INT32
 		upper := mid*uintptr(i.Dimension) + pixels
 
 		// row-transformation
 
-		var waitGroup sync.WaitGroup
 		waitGroup.Add(int(s / 2))
 		for row := pixels; row < upper; row += dimension {
 			go func(row uintptr) {
@@ -127,8 +116,7 @@ func (i Image) Transform() {
 
 		// column-transformation
 
-		var waitGroup2 sync.WaitGroup
-		waitGroup2.Add(int(s / 2))
+		waitGroup.Add(int(s / 2))
 		midOffset2 := mid * uintptr(i.Dimension)
 		for row := pixels; row < upper; row += dimension {
 			go func(row uintptr) {
@@ -142,10 +130,10 @@ func (i Image) Transform() {
 					*pixel1 = int32(a)
 					*pixel2 = int32(d)
 				}
-				waitGroup2.Done()
+				waitGroup.Done()
 			}(row)
 		}
-		waitGroup2.Wait()
+		waitGroup.Wait()
 		if debug {
 			fmt.Printf("after column-transformation: %d\n", s/2)
 			i.print()

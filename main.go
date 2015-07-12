@@ -17,18 +17,20 @@ var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
 const usage = "USAGE: %s bucketsort|threesat|haar\n"
 
-func doBucketsort(in, out *os.File) {
-	if err := bucketsort.SortFile(in, out); err != nil {
+func doBucketsort(in, out *os.File) time.Duration {
+	duration, err := bucketsort.SortFile(in, out)
+	if err != nil {
 		log.Fatal(err)
 	}
+	return duration
 }
 
-func doThreesat(in, out *os.File) {
+func doThreesat(in, out *os.File) time.Duration {
 	solver, err := threesat.New(in)
 	if err != nil {
 		log.Fatal(err)
 	}
-	solution := solver.Solve()
+	duration, solution := solver.Solve()
 	if solution == nil {
 		out.WriteString("Solution not found.\n")
 	} else {
@@ -42,12 +44,15 @@ func doThreesat(in, out *os.File) {
 		}
 		out.WriteString("\n")
 	}
+	return duration
 }
 
-func doHaar(in, out *os.File) {
-	if err := haar.ProcessFile(in, out); err != nil {
+func doHaar(in, out *os.File) time.Duration {
+	duration, err := haar.ProcessFile(in, out)
+	if err != nil {
 		log.Fatal(err)
 	}
+	return duration
 }
 
 func openInputOutput(args []string) (in, out *os.File, err error) {
@@ -105,16 +110,19 @@ func main() {
 	defer out.Close()
 
 	start := time.Now()
+	var duration time.Duration
 	switch args[0] {
 	case "bucketsort":
-		doBucketsort(in, out)
+		duration = doBucketsort(in, out)
 	case "threesat":
-		doThreesat(in, out)
+		duration = doThreesat(in, out)
 	case "haar":
-		doHaar(in, out)
+		duration = doHaar(in, out)
 	default:
 		log.Fatalf("algorithm not implemented: %s", os.Args[1])
 	}
-	elapsed := time.Since(start)
-	log.Printf("took %fms", float64(elapsed.Nanoseconds()/1e6))
+	computation := float64(duration.Nanoseconds() / 1e6)
+	overall := float64(time.Since(start).Nanoseconds() / 1e6)
+
+	log.Printf("computation time: %fms, overall time: %fms", computation, overall)
 }

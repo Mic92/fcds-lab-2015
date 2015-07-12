@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"time"
 	"unsafe"
 )
 
@@ -20,9 +21,11 @@ type Solver struct {
 	NVar    uint
 }
 
-func (s *Solver) Solve() *uint64 {
+func (s *Solver) Solve() (time.Duration, *uint64) {
+	start := time.Now()
+
 	if s.NVar == 0 {
-		return nil
+		return 0, nil
 	}
 	max := uint64(runtime.GOMAXPROCS(-1))
 	result := make(chan *uint64, 1)
@@ -34,10 +37,10 @@ func (s *Solver) Solve() *uint64 {
 	for i := uint64(0); i < max; i++ {
 		number := <-result
 		if number != nil {
-			return number
+			return time.Since(start), number
 		}
 	}
-	return nil
+	return time.Since(start), nil
 }
 
 var clause Clause

@@ -15,7 +15,7 @@ func TestSolveable3Sat(t *testing.T) {
 		t.Logf("%d: %v", k, v)
 	}
 	solver := sat.Solver{c, 3}
-	solution := solver.Solve()
+	_, solution := solver.Solve()
 	if solution == nil {
 		t.Fatal("no solution found")
 	}
@@ -36,7 +36,7 @@ func TestUnsolveable3Sat(t *testing.T) {
 		*sat.NewClause(-1, -1, -1),
 	}
 	solver := sat.Solver{c, 1}
-	solution := solver.Solve()
+	_, solution := solver.Solve()
 	if solution != nil {
 		t.Fatal("expect to find no solution, got: %d", *solution)
 	}

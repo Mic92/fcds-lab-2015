@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"time"
 )
 
 const (
@@ -85,15 +86,20 @@ func readInput(in *os.File) ([]byte, error) {
 	return data, nil
 }
 
-func SortFile(in *os.File, out *os.File) error {
+func SortFile(in *os.File, out *os.File) (time.Duration, error) {
 	data, err := readInput(in)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	buffedOut := bufio.NewWriter(out)
 	defer buffedOut.Flush()
-	for _, v := range Sort(data) {
+
+	start := time.Now()
+	res := Sort(data)
+	elapsed := time.Since(start)
+
+	for _, v := range res {
 		outData := []byte{
 			byte(v >> 48),
 			byte(v >> 40),
@@ -106,8 +112,8 @@ func SortFile(in *os.File, out *os.File) error {
 		}
 		_, err = buffedOut.Write(outData)
 		if err != nil {
-			return err
+			return elapsed, err
 		}
 	}
-	return nil
+	return elapsed, nil
 }

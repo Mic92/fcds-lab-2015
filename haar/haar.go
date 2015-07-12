@@ -15,8 +15,6 @@ import (
 const SIZEOF_INT32 = 4
 const SIZEOF_INT64 = 8
 
-const debug = false
-
 func ProcessFile(in, out *os.File) error {
 	info, err := in.Stat()
 	if err != nil {
@@ -35,14 +33,7 @@ func ProcessFile(in, out *os.File) error {
 
 	dimension := getDimension(inBuf)
 	data := castSlice(inBuf[SIZEOF_INT64:])
-	if debug {
-		log.Printf("dimension %d", dimension)
-	}
 	image := Image{data, dimension}
-	if debug {
-		log.Printf("data size %d", len(data))
-	}
-
 	start := time.Now()
 	image.Transform()
 	elapsed := time.Since(start)
@@ -98,47 +89,41 @@ func (i Image) print() {
 }
 
 func (i Image) Transform() {
-	if debug {
-		fmt.Printf("origin: %d\n", i.Dimension)
-		i.print()
-	}
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&i.Pixels))
+	pixels := header.Data
+	dimension := uintptr(i.Dimension) * SIZEOF_INT32
 
 	for s := i.Dimension; s > 1; s /= 2 {
-		mid := s / 2
+		mid := uintptr(s/2) * SIZEOF_INT32
+		upper := mid*uintptr(i.Dimension) + pixels
+
 		// row-transformation
-		upper := mid * i.Dimension
-		for row := uint64(0); row < upper; row += i.Dimension {
+		for row := pixels; row < upper; row += dimension {
 			upperInner := mid + row
-			for pos := uint64(row); pos < upperInner; pos++ {
-				pixel1 := int64(i.Pixels[pos])
-				pixel2 := int64(i.Pixels[pos+mid])
-				a := float64(pixel1+pixel2) / sqrt_2
-				d := float64(pixel1-pixel2) / sqrt_2
-				i.Pixels[pos] = int32(a)
-				i.Pixels[pos+mid] = int32(d)
+			for p := row; p < upperInner; p += SIZEOF_INT32 {
+				pixel1 := (*int32)(unsafe.Pointer(p))
+				pixel2 := (*int32)(unsafe.Pointer(p + mid))
+
+				a := float64(*pixel1+*pixel2) / sqrt_2
+				d := float64(*pixel1-*pixel2) / sqrt_2
+				*pixel1 = int32(a)
+				*pixel2 = int32(d)
 			}
 		}
-		if debug {
-			fmt.Printf("after row-transformation: %d\n", mid)
-			i.print()
-		}
+
 		// column-transformation
-		midOffset := mid * i.Dimension
-		upper2 := mid * i.Dimension
-		for row := uint64(0); row < upper2; row += i.Dimension {
+		midOffset2 := mid * uintptr(i.Dimension)
+		for row := pixels; row < upper; row += dimension {
 			upperInner := mid + row
-			for pos := uint64(row); pos < upperInner; pos++ {
-				pixel1 := int64(i.Pixels[pos])
-				pixel2 := int64(i.Pixels[pos+midOffset])
-				a := float64(pixel1+pixel2) / sqrt_2
-				d := float64(pixel1-pixel2) / sqrt_2
-				i.Pixels[pos] = int32(a)
-				i.Pixels[pos+midOffset] = int32(d)
+			for p := row; p < upperInner; p += SIZEOF_INT32 {
+				pixel1 := (*int32)(unsafe.Pointer(p))
+				pixel2 := (*int32)(unsafe.Pointer(p + midOffset2))
+
+				a := float64(*pixel1+*pixel2) / sqrt_2
+				d := float64(*pixel1-*pixel2) / sqrt_2
+				*pixel1 = int32(a)
+				*pixel2 = int32(d)
 			}
-		}
-		if debug {
-			fmt.Printf("after column-transformation: %d\n", mid)
-			i.print()
 		}
 	}
 }

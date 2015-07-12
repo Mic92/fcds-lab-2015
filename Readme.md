@@ -4,7 +4,7 @@ Implemented algorithm:
 
 - [x] bucketsort
 - [ ] friendly
-- [ ] haar (work in progress)
+- [x] haar
 - [ ] knapsack
 - [x] threesat
 

@@ -23,7 +23,9 @@ func ProcessFile(in, out *os.File) (time.Duration, error) {
 	}
 	dimension := getDimension(temp)
 	inBuf := make([]byte, dimension*dimension*SIZEOF_INT32+SIZEOF_INT64)
-	in.ReadAt(inBuf, 0)
+	if _, err := in.ReadAt(inBuf, 0); err != nil {
+		return 0, err
+	}
 
 	data := castSlice(inBuf[SIZEOF_INT64:])
 	image := Image{data, dimension}

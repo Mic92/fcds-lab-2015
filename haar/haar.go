@@ -22,7 +22,7 @@ func ProcessFile(in, out *os.File) (time.Duration, error) {
 		return 0, err
 	}
 	dimension := getDimension(temp)
-	inBuf := make([]byte, dimension*dimension*SIZEOF_INT32)
+	inBuf := make([]byte, dimension*dimension*SIZEOF_INT32+SIZEOF_INT64)
 	in.ReadAt(inBuf, 0)
 
 	data := castSlice(inBuf[SIZEOF_INT64:])

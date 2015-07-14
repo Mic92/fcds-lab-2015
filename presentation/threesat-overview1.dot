@@ -1,0 +1,41 @@
+digraph architecture {
+  node [style=rounded,style=filled,fontname=Verdana,fontsize=12,colorscheme=pastel18,color=1];
+  edge [color=darkgreen,fontname="Verdana",fontsize=10];
+  graph [ dpi = 300 ];
+  compound=true;
+
+  fontname=Verdana;
+  fontsize=12;
+  main_process [label="main process"];
+  input_file [label="large.in"];
+  output_file [label="console"];
+  main_process -> input_file [label="read"];
+  main_process -> output_file [label="write"];
+
+  numbers [shape=record, label="{<A>1 |<B> 2 |<C> 3 |<D> 4|<E> 5 |<F> 6 | ... |
+  2 ^ Variables }| potential\nsolutions"];
+
+  channel [label="result chan *uint64"];
+  main_process -> channel [label="<-result", dir="back"];
+
+{
+  edge [colorscheme=dark25,label="test"];
+  node [colorscheme=dark25];
+  goroutine1 [color=2];
+  goroutine1 -> numbers:A [color=2];
+  goroutine1 -> numbers:D [color=2];
+
+  goroutine2 [color=5];
+  goroutine2 -> numbers:B [color=5];
+  goroutine2 -> numbers:E [color=5];
+
+  goroutine3 [color=3];
+  goroutine3 -> numbers:C [color=3];
+  goroutine3 -> numbers:F [color=3];
+
+  channel -> goroutine1 [label="result<-solution", dir="back", color=2];
+  channel -> goroutine2 [label="result<-solution", dir="back", color=5];
+  channel -> goroutine3 [label="result<-solution", dir="back", color=3];
+}
+
+}

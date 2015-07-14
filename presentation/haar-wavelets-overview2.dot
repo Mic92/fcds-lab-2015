@@ -1,0 +1,59 @@
+digraph architecture {
+  node [style=rounded,style=filled,fontname=Verdana,fontsize=12,colorscheme=pastel18,color=1];
+  edge [color=darkgreen,fontname="Verdana",fontsize=10];
+  graph [ dpi = 300 ];
+  compound=true;
+
+  fontname=Verdana;
+  fontsize=12;
+  main_process [label="main process"];
+  input_file [label="4096x4096.in"];
+  output_file [label="4096x4096.out"];
+  main_process -> input_file [label="read"];
+  main_process -> output_file [label="write"];
+
+  row_transformation [label="Second Row Transformation", shape=box, style="", color=0];
+  image2 -> row_transformation [label="follows"];
+
+  {
+    edge [colorscheme=dark25, dir=both];
+    node [colorscheme=dark25];
+
+    image2:A -> image2:A2048 [color=1];
+    image2:B -> image2:B2048 [color=1];
+
+    image2:A1 -> image2:A2049 [color=2];
+    image2:B1 -> image2:B2049 [color=2];
+
+    image2:A2047 -> image2:A3 [color=3];
+    image2:B2047 -> image2:B3 [color=3];
+
+    subgraph cluster_column {
+      label="First Column transformation";
+      goroutine1 [color=1, label="Goroutine1"];
+      goroutine2 [color=2, label="Goroutine2"];
+      goroutineN [color=3, label="GoroutineN"];
+
+      goroutine1 -> image2 [style=invis];
+      goroutine2 -> image2 [style=invis];
+      goroutineN -> image2 [style=invis];
+
+      image2 [color=1,colorscheme="pastel18",shape=record, label="{
+      {<A>(1,1)|<B>(1,2)|...|<Z>(1,4096)} |
+      {<A1>(2,1)|<B1>(2,2)|... |<Z1>(2,4096)} |
+      {...} |
+      {<A2047>(2047,1)|<B2047>(2047,2) | ... | <Z2047>(2047,4096)} |
+      {<A2048>(2048,1)|<B2048>(2048,2) | ... | <Z2048>(2048,4096)} |
+      {<A2049>(2049,1)|<B2049>(2049,2) | ... | <Z2049>(2049,4096)} |
+      {...} |
+      {<A3>(4096,1)|<B3>(4096,2)| ... |<Z3>(4096,4096)} |
+      Image}"];
+    }
+  }
+
+  wait_group [label="wg sync.WaitGroup"]
+  main_process -> wait_group [label="wg.Wait()", dir="back"];
+  wait_group -> goroutine1 [label="wg.Done()", dir="back"];
+  wait_group -> goroutine2 [label="wg.Done()", dir="back"];
+  wait_group -> goroutineN [label="wg.Done()", dir="back"];
+}

@@ -1,0 +1,27 @@
+digraph architecture {
+  node [style=rounded,style=filled,fontname=Verdana,fontsize=12,colorscheme=pastel18,color=1];
+  edge [color=darkgreen,fontname="Verdana",fontsize=10];
+  graph [ dpi = 300 ];
+  compound=true;
+  fontname=Verdana;
+  fontsize=12;
+  main_process [label="main process"];
+  input_file [label="large.in"];
+  output_file [label="large.out"];
+  main_process -> input_file [label="read"];
+  main_process -> output_file [label="write"];
+  wait_group [label="wg sync.WaitGroup"]
+  buckets [shape=record, label="{{<A>A|<B>B|<C>C|<dots>...|<Z>Z}|Buckets}"];
+  main_process -> buckets:dots [label="fill"];
+  main_process -> buckets:Z [label="fill"];
+
+  Goroutine1 -> buckets:A [label="qsort()"];
+  Goroutine2 -> buckets:B [label="qsort()"];
+  Goroutine3 -> buckets:C [label="qsort()"];
+
+  main_process -> wait_group [label="wg.Wait()"];
+
+  wait_group -> Goroutine1 [label="wg.Done()", dir="back"];
+  wait_group -> Goroutine2 [label="wg.Done()", dir="back"];
+  wait_group -> Goroutine3 [label="wg.Done()", dir="back"];
+}

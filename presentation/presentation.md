@@ -27,12 +27,9 @@ Jörg Thalheim
 
 
 
+
 ## Bucketsort: Overview
 <img src="bucketsort-overview.png" alt="bucketsort" height="500">
-
-
-
-## Bucketsort: Performance
 
 
 
@@ -41,13 +38,8 @@ Jörg Thalheim
 
 
 
-
 ## Haar Wavelets: Overview 2
 <img src="haar-wavelets-overview2.png" alt="haar wavelets" height="500">
-
-
-
-## Haar Wavelets: Performance
 
 
 
@@ -56,4 +48,31 @@ Jörg Thalheim
 
 
 
+## Measurement
+- for `1` to `8` cpu cores
+  - take `10` measurements
+    - take computation time (only core algorithm)
+    - take total run time (computation time + time spent on I/O)
+  - exclude the slowest and fastest measurement
+  - average over the remaining `8` measurements
+- after each measurement call `sync` command, to flush remaining I/O buffers of the
+  operating system
+
+
+
+## Bucketsort: Performance
+<img src="bucketsort-final.png" alt="bucketsort" height="500">
+
+
+
 ## Threesat: Performance
+<img src="threesat-final.png" alt="threesat" height="500">
+
+
+
+## Haar Wavelets: Performance
+<img src="haar-final.png" alt="threesat" height="500">
+
+
+
+## Summary

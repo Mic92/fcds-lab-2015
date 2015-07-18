@@ -30,11 +30,22 @@ Jörg Thalheim
 
 ## Bucketsort: Overview
 <img src="bucketsort-overview.png" alt="bucketsort" height="500">
+Note:
+  - sequentially fill buckets
+  - parallel sort buckets using quicksort
+  - synchronize using go wait group (similar to barrier)
 
 
 
 ## Haar Wavelets: Overview 1
 <img src="haar-wavelets-overview1.png" alt="haar wavelets" height="500">
+Note:
+  - algorithm to prepare image compression -> matrix operation
+  - sequentially read/write haar wavelets
+  - in a loop, a row transformation, followed by column transformation
+  - row transformation is parallized line wise
+  - synchronized using go wait group
+  - same thing for column transformation
 
 
 
@@ -45,6 +56,11 @@ Jörg Thalheim
 
 ## Threesat: Overview
 <img src="threesat-overview1.png" alt="threesat" height="500">
+Note:
+  - parallized searching the keyspace (1,2^Variables)
+  - each goroutine, gets an offset in the loop, loop step = number of goroutines
+  - channel is used to report results back (similiar to a queue),
+    abort when first solution is found or all goroutines have finshed
 
 
 
@@ -62,17 +78,36 @@ Jörg Thalheim
 
 ## Bucketsort: Performance
 <img src="bucketsort-final.png" alt="bucketsort" height="500">
+Note:
+  - Implementation is much faster than original
+  - using quicksort instead of bucketsort
+  - encode words as integers
+  - scalability problem: fill sequentially buckets (could be parallized)
 
 
 
 ## Threesat: Performance
 <img src="threesat-final.png" alt="threesat" height="500">
+Note:
+  - scales well
+  - encode 3 clauses as a single integer -> only 1 conditional
+  - unroll the inner checker loop to reduce loading clauses from memory
+  - use unsafe pointer arithmetic in the loop body to improve performance
+  - go lacks of optimizations for binary logic
 
 
 
 ## Haar Wavelets: Performance
 <img src="haar-final.png" alt="threesat" height="500">
+Note:
+  - scales well
+  - unsafe pointer arithmetic to access matrix -> 30% Performance
+  - experiments: memory-map input file -> reduce initial waiting time/overall
+    time -> worser -> computation time (page fauls during computation)
 
 
 
-## Summary
+## Summary: Experience with Go
+- robust support for concurrency/parallism
+- good standart library: profiler/unit tests/race detector
+- room for improvements: compiler optimization
